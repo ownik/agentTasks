@@ -6,6 +6,7 @@ import jetbrains.buildServer.log.Loggers;
 import jetbrains.buildServer.serverSide.BuildAgentManager;
 import jetbrains.buildServer.serverSide.SBuildAgent;
 import jetbrains.buildServer.serverSide.ServerPaths;
+import jetbrains.buildServer.serverSide.comments.Comment;
 import jetbrains.buildServer.util.Dates;
 import jetbrains.buildServer.util.FileUtil;
 import jetbrains.buildServer.util.ItemProcessor;
@@ -87,13 +88,16 @@ public class AgentTasks {
             return new ItemProcessor<SBuildAgent>() {
               public boolean processItem(SBuildAgent sBuildAgent) {
                 int dayOfWeek = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
-                if (scheduledDaysOfWeeks.contains(dayOfWeek)
-                        && regexp.matcher(sBuildAgent.getName()).find()) {
-                  if ("enable".equals(taskName)) {
-                    sBuildAgent.setEnabled(true, null, "Enabled by agent tasks plugin");
-                  }
-                  if ("disable".equals(taskName)) {
-                    sBuildAgent.setEnabled(false, null, "Disabled by agent tasks plugin");
+                Comment comment = sBuildAgent.getStatusComment();
+                if(!"-".equals(comment.getComment())) {
+                  if (scheduledDaysOfWeeks.contains(dayOfWeek)
+                          && regexp.matcher(sBuildAgent.getName()).find()) {
+                    if ("enable".equals(taskName)) {
+                      sBuildAgent.setEnabled(true, null, "Enabled by agent tasks plugin");
+                    }
+                    if ("disable".equals(taskName)) {
+                      sBuildAgent.setEnabled(false, null, "Disabled by agent tasks plugin");
+                    }
                   }
                 }
                 return true;
