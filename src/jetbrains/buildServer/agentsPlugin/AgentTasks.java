@@ -65,7 +65,8 @@ public class AgentTasks {
       String taskDef = (String) props.get(p);
       String[] splitted = taskDef.split(",");
       try {
-        String[] timeStr = splitted[0].split(":");
+        String[] scheduleOption = splitted[0].split(" ");
+        String[] timeStr = scheduleOption[0].split(":");
         Calendar c = Calendar.getInstance();
         c.set(Calendar.HOUR_OF_DAY, Integer.parseInt(timeStr[0]));
         c.set(Calendar.MINUTE, Integer.parseInt(timeStr[1]));
@@ -73,6 +74,7 @@ public class AgentTasks {
         final Date time = c.getTime();
         final String taskName = splitted[1];
         final Pattern regexp = Pattern.compile(splitted[2]);
+        final HashSet<Integer> scheduledDaysOfWeeks = parseScheduledDaysOfWeeks(scheduleOption);
 
         Loggers.SERVER.info("Loaded task: " + taskName + " agents matching " + splitted[2] + " on " + splitted[0]);
 
@@ -84,7 +86,9 @@ public class AgentTasks {
           public ItemProcessor<SBuildAgent> getAgentsProcessor() {
             return new ItemProcessor<SBuildAgent>() {
               public boolean processItem(SBuildAgent sBuildAgent) {
-                if (regexp.matcher(sBuildAgent.getName()).find()) {
+                int dayOfWeek = Calendar.getInstance().get(Calendar.DAY_OF_WEEK);
+                if (scheduledDaysOfWeeks.contains(dayOfWeek)
+                        && regexp.matcher(sBuildAgent.getName()).find()) {
                   if ("enable".equals(taskName)) {
                     sBuildAgent.setEnabled(true, null, "Enabled by agent tasks plugin");
                   }
@@ -104,8 +108,45 @@ public class AgentTasks {
     }
     
     scheduleTasks(tasks);
-    
   }
+
+  private HashSet<Integer> parseScheduledDaysOfWeeks(String[] options) {
+    HashSet<Integer> scheduledDaysOfWeeks = new HashSet<Integer>();
+
+    if(options.length <= 1) {
+      scheduledDaysOfWeeks.add(Calendar.MONDAY);
+      scheduledDaysOfWeeks.add(Calendar.TUESDAY);
+      scheduledDaysOfWeeks.add(Calendar.WEDNESDAY);
+      scheduledDaysOfWeeks.add(Calendar.THURSDAY);
+      scheduledDaysOfWeeks.add(Calendar.FRIDAY);
+      scheduledDaysOfWeeks.add(Calendar.SATURDAY);
+      scheduledDaysOfWeeks.add(Calendar.SUNDAY);
+    }
+    else {
+      for (int i = 1; i < options.length; ++i) {
+        String str = options[i];
+
+        if (str.toLowerCase().equals("mon")) {
+          scheduledDaysOfWeeks.add(Calendar.MONDAY);
+        } else if (str.toLowerCase().equals("tue")) {
+          scheduledDaysOfWeeks.add(Calendar.TUESDAY);
+        } else if (str.toLowerCase().equals("wed")) {
+          scheduledDaysOfWeeks.add(Calendar.WEDNESDAY);
+        } else if (str.toLowerCase().equals("thu")) {
+          scheduledDaysOfWeeks.add(Calendar.THURSDAY);
+        } else if (str.toLowerCase().equals("fri")) {
+          scheduledDaysOfWeeks.add(Calendar.FRIDAY);
+        } else if (str.toLowerCase().equals("sat")) {
+          scheduledDaysOfWeeks.add(Calendar.SATURDAY);
+        } else if (str.toLowerCase().equals("sun")) {
+          scheduledDaysOfWeeks.add(Calendar.SUNDAY);
+        }
+      }
+    }
+
+    return scheduledDaysOfWeeks;
+  }
+
 
   private synchronized void scheduleTasks(List<TaskDescriptor> tasks) {
     for (Future t: myTasks) t.cancel(true);
